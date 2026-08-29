@@ -1,0 +1,3 @@
+backend/myvenv/**
+__pycache__/
+.vscode/
