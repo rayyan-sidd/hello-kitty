@@ -1,11 +1,11 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from fastapi import Query
 from typing import Optional
+from datetime import date
 
 load_dotenv()
 
@@ -34,11 +34,11 @@ def root():
     return {"status": "Fire detection API is running"}
 
 @app.get("/sites")
-
-@app.get("/sites")
 def get_sites(
     limit: int = Query(2000, le=20000),
-    predicted_type: Optional[str] = None
+    predicted_type: Optional[str] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
 ):
     conn = get_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -48,14 +48,24 @@ def get_sites(
             id, loc_group, latitude, longitude,
             predicted_type, confidence_score, persist_days, detection_count,
             dist_to_industrial_km, dist_to_mining_km, dist_to_power_km,
-            nearest_industrial_name, nearest_mining_name, nearest_power_name
+            nearest_industrial_name, nearest_mining_name, nearest_power_name,
+            first_detected, last_detected
         FROM sites
+        WHERE 1=1
     """
     params = []
 
     if predicted_type:
-        query += " WHERE predicted_type = %s"
+        query += " AND predicted_type = %s"
         params.append(predicted_type)
+
+    if start_date:
+        query += " AND last_detected >= %s"
+        params.append(start_date)
+
+    if end_date:
+        query += " AND first_detected <= %s"
+        params.append(end_date)
 
     query += " ORDER BY confidence_score DESC LIMIT %s"
     params.append(limit)
@@ -86,6 +96,8 @@ def get_sites(
                 "nearest_industrial_name": row["nearest_industrial_name"],
                 "nearest_mining_name": row["nearest_mining_name"],
                 "nearest_power_name": row["nearest_power_name"],
+                "first_detected": str(row["first_detected"]) if row["first_detected"] else None,
+                "last_detected": str(row["last_detected"]) if row["last_detected"] else None,
             }
         })
 
