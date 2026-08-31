@@ -3,11 +3,14 @@ import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import HeatLayer from "./layers/HeatLayer";
 import ClusterLayer from "./layers/ClusterLayer";
 import PinsLayer from "./layers/PinsLayer";
+import InteractiveSitesLayer from "./layers/InteractiveSitesLayer";
 import { useSitesData } from "./useSitesData";
 
+const SATELLITE_TILES =
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 const DARK_TILES =
   "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
-const DARK_ATTRIBUTION = "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ";
+const SATELLITE_ATTRIBUTION = "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ";
 
 function ResizeFix() {
   const map = useMap();
@@ -32,7 +35,13 @@ function ResizeFix() {
   return null;
 }
 
-export default function MapView({ startDate, endDate, mapMode, onSelect }) {
+export default function MapView({
+  startDate,
+  endDate,
+  mapMode,
+  basemap = "satellite",
+  onSelect,
+}) {
   const { geojson, heatPoints } = useSitesData(startDate, endDate);
   // const { geojson, heatPoints } = useSitesData(startDate, endDate);
   console.log("MapView geojson:", geojson);
@@ -46,10 +55,16 @@ export default function MapView({ startDate, endDate, mapMode, onSelect }) {
         style={{ width: "100%", height: "100%" }}
         zoomControl={false}
       >
-        <TileLayer url={DARK_TILES} attribution={DARK_ATTRIBUTION} />
+        <TileLayer
+          url={basemap === "dark" ? DARK_TILES : SATELLITE_TILES}
+          attribution={SATELLITE_ATTRIBUTION}
+        />
         <ResizeFix />
         {mapMode === "heatmap" && heatPoints && (
-          <HeatLayer points={heatPoints} />
+          <>
+            <HeatLayer points={heatPoints} />
+            <InteractiveSitesLayer geojson={geojson} onSelect={onSelect} />
+          </>
         )}
         {mapMode === "clusters" && geojson && (
           <ClusterLayer geojson={geojson} onSelect={onSelect} />

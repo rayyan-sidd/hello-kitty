@@ -9,19 +9,16 @@ import {
   ArrowUpRight,
   Bell,
   CalendarDays,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Clock3,
   CloudCog,
-  Crosshair,
   Database,
   Download,
   Eye,
   Flame,
   Gauge,
   Globe2,
-  Layers3,
   LayoutDashboard,
   MapPin,
   Menu,
@@ -42,6 +39,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -53,8 +51,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import MapView from "@/components/map/MapView";
+import { useDashboardSummary } from "@/hooks/useDashboardSummary";
 
 const assets = {
   mark: "/manus-storage/terravue-mark_61ac7d4b.png",
@@ -129,28 +132,233 @@ type ObservationSnapshot = {
   selectedConfidence: number;
   focusSiteId: string;
   note: string;
-  hotspots: Array<{ siteId: string; left: string; top: string; isCritical?: boolean; delay: string }>;
+  hotspots: Array<{
+    siteId: string;
+    left: string;
+    top: string;
+    isCritical?: boolean;
+    delay: string;
+  }>;
 };
 
 const observationSnapshots: ObservationSnapshot[] = [
-  { dateISO: "2026-08-21", dateLabel: "21 AUG 2026", shortDate: "21 AUG", pass: "1134", signals: 14, coverage: "73%", resolution: "1 KM", lastObserved: "05:16 UTC", selectedConfidence: 81, focusSiteId: "IN-16-091", note: "Low-density thermal activity across the western crop belt.", hotspots: [{ siteId: "IN-16-091", left: "51%", top: "64%", delay: "-0.25s" }, { siteId: "IN-05-206", left: "22%", top: "58%", delay: "-1.8s" }] },
-  { dateISO: "2026-08-22", dateLabel: "22 AUG 2026", shortDate: "22 AUG", pass: "1135", signals: 16, coverage: "76%", resolution: "1 KM", lastObserved: "05:19 UTC", selectedConfidence: 84, focusSiteId: "IN-05-206", note: "Mining-related persistence detected near the Singrauli basin.", hotspots: [{ siteId: "IN-05-206", left: "23%", top: "57%", delay: "-1.8s" }, { siteId: "IN-16-091", left: "52%", top: "64%", delay: "-0.25s" }, { siteId: "IN-08-117", left: "71%", top: "55%", delay: "-1.4s" }] },
-  { dateISO: "2026-08-23", dateLabel: "23 AUG 2026", shortDate: "23 AUG", pass: "1136", signals: 18, coverage: "78%", resolution: "1 KM", lastObserved: "05:22 UTC", selectedConfidence: 87, focusSiteId: "IN-08-117", note: "Wildfire probability rises along the Rajasthan buffer zone.", hotspots: [{ siteId: "IN-08-117", left: "70%", top: "54%", delay: "-1.4s", isCritical: true }, { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" }, { siteId: "IN-05-206", left: "23%", top: "57%", delay: "-1.8s" }] },
-  { dateISO: "2026-08-24", dateLabel: "24 AUG 2026", shortDate: "24 AUG", pass: "1137", signals: 17, coverage: "80%", resolution: "1 KM", lastObserved: "05:24 UTC", selectedConfidence: 89, focusSiteId: "IN-08-117", note: "Repeat observation confirms a persistent non-urban heat signature.", hotspots: [{ siteId: "IN-08-117", left: "70%", top: "54%", delay: "-1.4s", isCritical: true }, { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" }, { siteId: "IN-05-206", left: "24%", top: "57%", delay: "-1.8s" }] },
-  { dateISO: "2026-08-25", dateLabel: "25 AUG 2026", shortDate: "25 AUG", pass: "1138", signals: 20, coverage: "82%", resolution: "750 M", lastObserved: "05:28 UTC", selectedConfidence: 91, focusSiteId: "IN-23-044", note: "New industrial corridor signal enters the high-confidence queue.", hotspots: [{ siteId: "IN-23-044", left: "39%", top: "38%", delay: "-0.75s", isCritical: true }, { siteId: "IN-08-117", left: "70%", top: "54%", delay: "-1.4s" }, { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" }] },
-  { dateISO: "2026-08-26", dateLabel: "26 AUG 2026", shortDate: "26 AUG", pass: "1139", signals: 21, coverage: "84%", resolution: "750 M", lastObserved: "05:31 UTC", selectedConfidence: 92, focusSiteId: "IN-23-044", note: "Industrial signature strengthens against the local land-cover baseline.", hotspots: [{ siteId: "IN-23-044", left: "39%", top: "38%", delay: "-0.75s", isCritical: true }, { siteId: "IN-08-117", left: "70%", top: "54%", delay: "-1.4s" }, { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" }, { siteId: "IN-05-206", left: "24%", top: "57%", delay: "-1.8s" }] },
-  { dateISO: "2026-08-27", dateLabel: "27 AUG 2026", shortDate: "27 AUG", pass: "1140", signals: 22, coverage: "85%", resolution: "500 M", lastObserved: "05:34 UTC", selectedConfidence: 94, focusSiteId: "IN-23-044", note: "Cross-sensor agreement moves Korba into analyst review.", hotspots: [{ siteId: "IN-23-044", left: "39%", top: "38%", delay: "-0.75s", isCritical: true }, { siteId: "IN-08-117", left: "70%", top: "54%", delay: "-1.4s" }, { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" }, { siteId: "IN-05-206", left: "24%", top: "57%", delay: "-1.8s" }] },
-  { dateISO: "2026-08-28", dateLabel: "28 AUG 2026", shortDate: "28 AUG", pass: "1141", signals: 23, coverage: "87%", resolution: "375 M", lastObserved: "05:36 UTC", selectedConfidence: 95, focusSiteId: "IN-23-044", note: "Thermal delta remains above the industrial activity threshold.", hotspots: [{ siteId: "IN-23-044", left: "39%", top: "38%", delay: "-0.75s", isCritical: true }, { siteId: "IN-08-117", left: "70%", top: "54%", delay: "-1.4s" }, { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" }, { siteId: "IN-05-206", left: "24%", top: "57%", delay: "-1.8s" }] },
-  { dateISO: "2026-08-29", dateLabel: "29 AUG 2026", shortDate: "29 AUG", pass: "1142", signals: 24, coverage: "88%", resolution: "375 M", lastObserved: "05:38 UTC", selectedConfidence: 96, focusSiteId: "IN-23-044", note: "Latest pass: high-confidence industrial fire candidate at Korba.", hotspots: [{ siteId: "IN-23-044", left: "39%", top: "38%", delay: "-0.75s", isCritical: true }, { siteId: "IN-08-117", left: "70%", top: "54%", delay: "-1.4s" }, { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" }, { siteId: "IN-05-206", left: "24%", top: "57%", delay: "-1.8s" }] },
+  {
+    dateISO: "2026-08-21",
+    dateLabel: "21 AUG 2026",
+    shortDate: "21 AUG",
+    pass: "1134",
+    signals: 14,
+    coverage: "73%",
+    resolution: "1 KM",
+    lastObserved: "05:16 UTC",
+    selectedConfidence: 81,
+    focusSiteId: "IN-16-091",
+    note: "Low-density thermal activity across the western crop belt.",
+    hotspots: [
+      { siteId: "IN-16-091", left: "51%", top: "64%", delay: "-0.25s" },
+      { siteId: "IN-05-206", left: "22%", top: "58%", delay: "-1.8s" },
+    ],
+  },
+  {
+    dateISO: "2026-08-22",
+    dateLabel: "22 AUG 2026",
+    shortDate: "22 AUG",
+    pass: "1135",
+    signals: 16,
+    coverage: "76%",
+    resolution: "1 KM",
+    lastObserved: "05:19 UTC",
+    selectedConfidence: 84,
+    focusSiteId: "IN-05-206",
+    note: "Mining-related persistence detected near the Singrauli basin.",
+    hotspots: [
+      { siteId: "IN-05-206", left: "23%", top: "57%", delay: "-1.8s" },
+      { siteId: "IN-16-091", left: "52%", top: "64%", delay: "-0.25s" },
+      { siteId: "IN-08-117", left: "71%", top: "55%", delay: "-1.4s" },
+    ],
+  },
+  {
+    dateISO: "2026-08-23",
+    dateLabel: "23 AUG 2026",
+    shortDate: "23 AUG",
+    pass: "1136",
+    signals: 18,
+    coverage: "78%",
+    resolution: "1 KM",
+    lastObserved: "05:22 UTC",
+    selectedConfidence: 87,
+    focusSiteId: "IN-08-117",
+    note: "Wildfire probability rises along the Rajasthan buffer zone.",
+    hotspots: [
+      {
+        siteId: "IN-08-117",
+        left: "70%",
+        top: "54%",
+        delay: "-1.4s",
+        isCritical: true,
+      },
+      { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" },
+      { siteId: "IN-05-206", left: "23%", top: "57%", delay: "-1.8s" },
+    ],
+  },
+  {
+    dateISO: "2026-08-24",
+    dateLabel: "24 AUG 2026",
+    shortDate: "24 AUG",
+    pass: "1137",
+    signals: 17,
+    coverage: "80%",
+    resolution: "1 KM",
+    lastObserved: "05:24 UTC",
+    selectedConfidence: 89,
+    focusSiteId: "IN-08-117",
+    note: "Repeat observation confirms a persistent non-urban heat signature.",
+    hotspots: [
+      {
+        siteId: "IN-08-117",
+        left: "70%",
+        top: "54%",
+        delay: "-1.4s",
+        isCritical: true,
+      },
+      { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" },
+      { siteId: "IN-05-206", left: "24%", top: "57%", delay: "-1.8s" },
+    ],
+  },
+  {
+    dateISO: "2026-08-25",
+    dateLabel: "25 AUG 2026",
+    shortDate: "25 AUG",
+    pass: "1138",
+    signals: 20,
+    coverage: "82%",
+    resolution: "750 M",
+    lastObserved: "05:28 UTC",
+    selectedConfidence: 91,
+    focusSiteId: "IN-23-044",
+    note: "New industrial corridor signal enters the high-confidence queue.",
+    hotspots: [
+      {
+        siteId: "IN-23-044",
+        left: "39%",
+        top: "38%",
+        delay: "-0.75s",
+        isCritical: true,
+      },
+      { siteId: "IN-08-117", left: "70%", top: "54%", delay: "-1.4s" },
+      { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" },
+    ],
+  },
+  {
+    dateISO: "2026-08-26",
+    dateLabel: "26 AUG 2026",
+    shortDate: "26 AUG",
+    pass: "1139",
+    signals: 21,
+    coverage: "84%",
+    resolution: "750 M",
+    lastObserved: "05:31 UTC",
+    selectedConfidence: 92,
+    focusSiteId: "IN-23-044",
+    note: "Industrial signature strengthens against the local land-cover baseline.",
+    hotspots: [
+      {
+        siteId: "IN-23-044",
+        left: "39%",
+        top: "38%",
+        delay: "-0.75s",
+        isCritical: true,
+      },
+      { siteId: "IN-08-117", left: "70%", top: "54%", delay: "-1.4s" },
+      { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" },
+      { siteId: "IN-05-206", left: "24%", top: "57%", delay: "-1.8s" },
+    ],
+  },
+  {
+    dateISO: "2026-08-27",
+    dateLabel: "27 AUG 2026",
+    shortDate: "27 AUG",
+    pass: "1140",
+    signals: 22,
+    coverage: "85%",
+    resolution: "500 M",
+    lastObserved: "05:34 UTC",
+    selectedConfidence: 94,
+    focusSiteId: "IN-23-044",
+    note: "Cross-sensor agreement moves Korba into analyst review.",
+    hotspots: [
+      {
+        siteId: "IN-23-044",
+        left: "39%",
+        top: "38%",
+        delay: "-0.75s",
+        isCritical: true,
+      },
+      { siteId: "IN-08-117", left: "70%", top: "54%", delay: "-1.4s" },
+      { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" },
+      { siteId: "IN-05-206", left: "24%", top: "57%", delay: "-1.8s" },
+    ],
+  },
+  {
+    dateISO: "2026-08-28",
+    dateLabel: "28 AUG 2026",
+    shortDate: "28 AUG",
+    pass: "1141",
+    signals: 23,
+    coverage: "87%",
+    resolution: "375 M",
+    lastObserved: "05:36 UTC",
+    selectedConfidence: 95,
+    focusSiteId: "IN-23-044",
+    note: "Thermal delta remains above the industrial activity threshold.",
+    hotspots: [
+      {
+        siteId: "IN-23-044",
+        left: "39%",
+        top: "38%",
+        delay: "-0.75s",
+        isCritical: true,
+      },
+      { siteId: "IN-08-117", left: "70%", top: "54%", delay: "-1.4s" },
+      { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" },
+      { siteId: "IN-05-206", left: "24%", top: "57%", delay: "-1.8s" },
+    ],
+  },
+  {
+    dateISO: "2026-08-29",
+    dateLabel: "29 AUG 2026",
+    shortDate: "29 AUG",
+    pass: "1142",
+    signals: 24,
+    coverage: "88%",
+    resolution: "375 M",
+    lastObserved: "05:38 UTC",
+    selectedConfidence: 96,
+    focusSiteId: "IN-23-044",
+    note: "Latest pass: high-confidence industrial fire candidate at Korba.",
+    hotspots: [
+      {
+        siteId: "IN-23-044",
+        left: "39%",
+        top: "38%",
+        delay: "-0.75s",
+        isCritical: true,
+      },
+      { siteId: "IN-08-117", left: "70%", top: "54%", delay: "-1.4s" },
+      { siteId: "IN-16-091", left: "52%", top: "63%", delay: "-0.25s" },
+      { siteId: "IN-05-206", left: "24%", top: "57%", delay: "-1.8s" },
+    ],
+  },
 ];
 
-const toDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const toDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 const navItems = [
-  { label: "Command", icon: LayoutDashboard },
-  { label: "Detections", icon: Flame, count: "24" },
-  { label: "Classification", icon: Waypoints },
-  { label: "Regions", icon: Globe2 },
+  { label: "Dashboard", icon: LayoutDashboard },
+  { label: "Analytics", icon: Activity },
+  { label: "Alerts", icon: Bell, count: "24" },
+  { label: "Settings", icon: Settings2 },
 ];
 
 const systemItems = [
@@ -159,57 +367,162 @@ const systemItems = [
   { label: "Audit trail", icon: SquareTerminal },
 ];
 
-function StatusBadge({ children, tone = "neutral" }: { children: React.ReactNode; tone?: "amber" | "green" | "red" | "neutral" }) {
+const classificationCards = [
+  {
+    label: "Industrial fire",
+    type: "Industrial Fire",
+    value: "09",
+    color: "#f97316",
+    width: "82%",
+  },
+  {
+    label: "Wildfire",
+    type: "Wildfire",
+    value: "06",
+    color: "#dc2626",
+    width: "70%",
+  },
+  {
+    label: "Mining",
+    type: "Mining",
+    value: "04",
+    color: "#78716c",
+    width: "58%",
+  },
+  {
+    label: "Agricultural burn",
+    type: "Agricultural Burn",
+    value: "07",
+    color: "#facc15",
+    width: "66%",
+  },
+  {
+    label: "Gas flare",
+    type: "Gas Flare",
+    value: "02",
+    color: "#3b82f6",
+    width: "36%",
+  },
+  {
+    label: "Persistent Industrial thermal source",
+    type: "Persistent Industrial Thermal Source",
+    value: "01",
+    color: "#f5f5f5",
+    width: "18%",
+  },
+];
+
+function StatusBadge({
+  children,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  tone?: "amber" | "green" | "red" | "neutral";
+}) {
   const styles = {
     amber: "border-[#ffd25a]/35 bg-[#ffd25a]/10 text-[#ffd25a]",
     green: "border-[#ffd25a]/30 bg-[#ffd25a]/10 text-[#ffd25a]",
     red: "border-[#ffaa5a]/35 bg-[#ffaa5a]/10 text-[#fffff0]",
     neutral: "border-white/10 bg-white/[0.035] text-[#e8dacb]",
   };
-  return <span className={`inline-flex items-center border px-2 py-1 tv-display text-[10px] font-bold uppercase tracking-[0.12em] ${styles[tone]}`}>{children}</span>;
+  return (
+    <span
+      className={`inline-flex items-center border px-2 py-1 tv-display text-[10px] font-bold uppercase tracking-[0.12em] ${styles[tone]}`}
+    >
+      {children}
+    </span>
+  );
 }
 
-function SectionTitle({ eyebrow, title, action }: { eyebrow: string; title: string; action?: React.ReactNode }) {
+function SectionTitle({
+  eyebrow,
+  title,
+  action,
+}: {
+  eyebrow: string;
+  title: string;
+  action?: React.ReactNode;
+}) {
   return (
     <div className="tv-section-heading px-4 sm:px-5">
       <div>
         <div className="tv-kicker mb-1">{eyebrow}</div>
-        <div className="tv-display text-[15px] font-bold tracking-[0.08em] text-[#fffff0]">{title}</div>
+        <div className="tv-display text-[15px] font-bold tracking-[0.08em] text-[#fffff0]">
+          {title}
+        </div>
       </div>
       {action}
     </div>
   );
 }
 
-function MetricCard({ label, value, note, icon: Icon, tone = "normal", trend }: { label: string; value: string; note: string; icon: React.ElementType; tone?: "normal" | "amber"; trend?: "up" | "down" }) {
+function MetricCard({
+  label,
+  value,
+  note,
+  icon: Icon,
+  tone = "normal",
+  trend,
+}: {
+  label: string;
+  value: string;
+  note: string;
+  icon: React.ElementType;
+  tone?: "normal" | "amber";
+  trend?: "up" | "down";
+}) {
   return (
     <div className="tv-panel tv-corner-brackets tv-readout min-w-0 p-4">
       <div className="mb-5 flex items-start justify-between gap-3">
         <span className="tv-kicker">{label}</span>
-        <Icon className={tone === "amber" ? "h-4 w-4 text-[#ffd25a]" : "h-4 w-4 text-[#d8c8b9]"} strokeWidth={1.6} />
+        <Icon
+          className={
+            tone === "amber"
+              ? "h-4 w-4 text-[#ffd25a]"
+              : "h-4 w-4 text-[#d8c8b9]"
+          }
+          strokeWidth={1.6}
+        />
       </div>
       <div className="flex items-end justify-between gap-2">
-        <div className={`tv-metric-value ${tone === "amber" ? "is-amber" : ""}`}>{value}</div>
+        <div
+          className={`tv-metric-value ${tone === "amber" ? "is-amber" : ""}`}
+        >
+          {value}
+        </div>
         {trend && (
-          <div className={`mb-0.5 flex items-center gap-1 text-[10px] font-semibold ${trend === "up" ? "text-[#ffd25a]" : "text-[#fffff0]"}`}>
-            {trend === "up" ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+          <div
+            className={`mb-0.5 flex items-center gap-1 text-[10px] font-semibold ${trend === "up" ? "text-[#ffd25a]" : "text-[#fffff0]"}`}
+          >
+            {trend === "up" ? (
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            ) : (
+              <ArrowDownRight className="h-3.5 w-3.5" />
+            )}
             {trend === "up" ? "4.2%" : "1.8%"}
           </div>
         )}
       </div>
       <div className="mt-3 text-[11px] text-[#d8c8b9]">{note}</div>
-      <div className="mt-3 flex items-center gap-2 tv-display text-[9px] font-bold uppercase tracking-[0.12em] text-[#c6ad9c]"><span className="h-1 w-1 bg-[#ffd25a]" />Live readout</div>
+      <div className="mt-3 flex items-center gap-2 tv-display text-[9px] font-bold uppercase tracking-[0.12em] text-[#c6ad9c]">
+        <span className="h-1 w-1 bg-[#ffd25a]" />
+        Live readout
+      </div>
     </div>
   );
 }
 
 export default function Home() {
-  const [activeNav, setActiveNav] = useState("Command");
+  const [, setLocation] = useLocation();
+  const [activeNav, setActiveNav] = useState("Dashboard");
   const [selectedSite, setSelectedSite] = useState(sites[0]);
-  const [selectedDateIndex, setSelectedDateIndex] = useState(observationSnapshots.length - 1);
+  const [selectedDateIndex, setSelectedDateIndex] = useState(
+    observationSnapshots.length - 1
+  );
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activeLayer, setActiveLayer] = useState("Thermal delta");
   const [mapMode, setMapMode] = useState("clusters");
+  const [baseMap, setBaseMap] = useState<"satellite" | "dark">("satellite");
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [isLive, setIsLive] = useState(true);
   const [showLayers, setShowLayers] = useState(false);
@@ -218,46 +531,107 @@ export default function Home() {
   const [refreshCount, setRefreshCount] = useState(0);
 
   const currentObservation = observationSnapshots[selectedDateIndex];
-  const selectedConfidence = selectedSite.id === currentObservation.focusSiteId ? currentObservation.selectedConfidence : selectedSite.confidence;
-  const selectedCalendarDate = new Date(`${currentObservation.dateISO}T00:00:00`);
+  const selectedConfidence =
+    selectedSite.id === currentObservation.focusSiteId
+      ? currentObservation.selectedConfidence
+      : selectedSite.confidence;
+  const selectedCalendarDate = new Date(
+    `${currentObservation.dateISO}T00:00:00`
+  );
+  const selectedProperties = (selectedFeature as any)?.properties;
+  const selectedDisplay = {
+    id: selectedProperties?.id ?? selectedSite.id,
+    location: selectedProperties?.site ?? selectedSite.location,
+    classification:
+      selectedProperties?.classification ?? `${selectedSite.type} thermal`,
+    confidence:
+      selectedProperties?.confidence_score != null
+        ? Math.round(Number(selectedProperties.confidence_score) * 100)
+        : selectedConfidence,
+    lastObserved:
+      selectedProperties?.last_detected ?? currentObservation.lastObserved,
+    delta:
+      selectedProperties?.frp_per_day != null
+        ? `${Number(selectedProperties.frp_per_day).toFixed(1)} FRP/day`
+        : selectedSite.delta,
+  };
+  const { summary } = useDashboardSummary(
+    currentObservation.dateISO,
+    currentObservation.dateISO
+  );
+  const liveClassificationCards = classificationCards.map(item => {
+    const live = summary?.by_type[item.type];
+    const maxCount = summary
+      ? Math.max(...Object.values(summary.by_type).map(entry => entry.count), 1)
+      : 1;
+    return live
+      ? {
+          ...item,
+          value: String(live.count).padStart(2, "0"),
+          width: `${Math.max(8, Math.round((live.count / maxCount) * 100))}%`,
+        }
+      : item;
+  });
 
   const filteredSites = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return sites;
-    return sites.filter((site) => `${site.id} ${site.location} ${site.type} ${site.district}`.toLowerCase().includes(query));
+    return sites.filter(site =>
+      `${site.id} ${site.location} ${site.type} ${site.district}`
+        .toLowerCase()
+        .includes(query)
+    );
   }, [search]);
 
   const handleDateChange = (index: number) => {
     setSelectedDateIndex(index);
-    const focusSite = sites.find((site) => site.id === observationSnapshots[index].focusSiteId);
+    const focusSite = sites.find(
+      site => site.id === observationSnapshots[index].focusSiteId
+    );
     if (focusSite) setSelectedSite(focusSite);
   };
 
-  const [selectedDate, setSelectedDate] = useState("2026-05-01");
-
   const handleCalendarSelect = (date?: Date) => {
     if (!date) return;
-    setSelectedDate(toDateKey(date));
-    setCalendarOpen(false);
+    const index = observationSnapshots.findIndex(
+      observation => observation.dateISO === toDateKey(date)
+    );
+    if (index >= 0) {
+      handleDateChange(index);
+      setCalendarOpen(false);
+    }
   };
 
   const handleNav = (label: string) => {
     setActiveNav(label);
-    if (label !== "Command") toast(`${label} module is staged for the next operations release.`);
+    if (label === "Analytics") {
+      const date = currentObservation.dateISO;
+      setLocation(`/analytics?start_date=${date}&end_date=${date}`);
+      return;
+    }
+    if (label !== "Command")
+      toast(`${label} module is staged for the next operations release.`);
   };
 
   const handleRefresh = () => {
-    setRefreshCount((value) => value + 1);
-    toast.success("Telemetry synchronized", { description: "Latest satellite pass and classification queue are in view." });
+    setRefreshCount(value => value + 1);
+    toast.success("Telemetry synchronized", {
+      description:
+        "Latest satellite pass and classification queue are in view.",
+    });
   };
 
   const handleSiteSelect = (site: Site) => {
     setSelectedSite(site);
-    toast(`Signal ${site.id} selected`, { description: `${site.type} signature at ${site.location}.` });
+    toast(`Signal ${site.id} selected`, {
+      description: `${site.type} signature at ${site.location}.`,
+    });
   };
 
   const handleScrollToQueue = () => {
-    document.getElementById("incident-queue")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document
+      .getElementById("incident-queue")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -538,14 +912,14 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="absolute inset-0">
-                  <MapView
-                    startDate={selectedDate}
-                    endDate={selectedDate}
-                    mapMode={mapMode}
-                    onSelect={setSelectedFeature}
-                  />
-                </div>
+                <MapView
+                  startDate={currentObservation.dateISO}
+                  endDate={currentObservation.dateISO}
+                  mapMode={mapMode}
+                  basemap={baseMap}
+                  onSelect={setSelectedFeature}
+                />
+                <div className="tv-scanline" />
 
                 <div className="absolute bottom-4 left-4 z-10 max-w-[230px] border border-[#ffd25a]/30 bg-[#291711]/85 p-3  sm:bottom-5 sm:left-5">
                   <div className="mb-2 flex items-center gap-2">
@@ -555,10 +929,12 @@ export default function Home() {
                     </span>
                   </div>
                   <div className="tv-display text-sm font-bold tracking-[0.08em] text-[#fffff0]">
-                    {selectedSite.id} · {selectedSite.type.toUpperCase()}
+                    {selectedDisplay.id} ·{" "}
+                    {String(selectedDisplay.classification).toUpperCase()}
                   </div>
                   <div className="mt-1 text-[10px] leading-relaxed text-[#d8c8b9]">
-                    {selectedSite.location} · confidence {selectedConfidence}% ·{" "}
+                    {selectedDisplay.location} · confidence{" "}
+                    {selectedDisplay.confidence}% ·{" "}
                     {currentObservation.dateLabel}
                   </div>
                 </div>
@@ -594,50 +970,35 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="absolute right-4 top-[91px] z-10 sm:right-5">
-                  <button
-                    className={`tv-control tv-focus-ring ${showLayers ? "!border-[#ffd25a]/70 !bg-[#ffd25a]/15 !text-[#ffd25a]" : ""}`}
-                    onClick={() => setShowLayers(value => !value)}
-                    aria-label="Toggle map layers"
-                  >
-                    <Layers3 className="h-4 w-4" />
-                  </button>
-                  {showLayers && (
-                    <div className="absolute right-0 top-10 w-44 border border-white/[0.14] bg-[#3a1e16]/95 p-2 shadow-lg ">
-                      <div className="px-2 pb-2 pt-1 tv-kicker">Map layers</div>
-                      {["Thermal delta", "Land cover", "Protected areas"].map(
-                        layer => (
-                          <button
-                            key={layer}
-                            className={`flex w-full items-center justify-between px-2 py-2 text-left text-[11px] transition hover:bg-white/[0.05] ${activeLayer === layer ? "text-[#ffd25a]" : "text-[#e8dacb]"}`}
-                            onClick={() => {
-                              setActiveLayer(layer);
-                              setShowLayers(false);
-                            }}
-                          >
-                            <span>{layer}</span>
-                            {activeLayer === layer && (
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        )
-                      )}
-                    </div>
-                  )}
+                <div className="absolute right-5 top-[92px] z-10 flex items-center gap-2">
+                  <div className="flex border border-[#ffd25a]/45 bg-[#291711]/90 p-1">
+                    <button
+                      className={`tv-layer-chip px-3 py-1.5 ${baseMap === "satellite" ? "is-active" : ""}`}
+                      onClick={() => setBaseMap("satellite")}
+                    >
+                      ● SATELLITE
+                    </button>
+                    <button
+                      className={`tv-layer-chip px-3 py-1.5 ${baseMap === "dark" ? "is-active" : ""}`}
+                      onClick={() => setBaseMap("dark")}
+                    >
+                      ○ DARK OPS
+                    </button>
+                  </div>
                 </div>
 
-                <div className="absolute bottom-4 left-1/2 z-10 hidden -translate-x-1/2 items-center gap-1.5 border border-white/[0.11] bg-[#3a1e16] p-1.5  md:flex">
+                <div className="absolute bottom-4 left-1/2 z-10 hidden -translate-x-1/2 items-center gap-1.5 border border-white/[0.11] bg-[#3a1e16] p-1.5 md:flex">
                   {[
-                    { key: "clusters", label: "Clusters" },
-                    { key: "heatmap", label: "Heatmap" },
-                    { key: "pins", label: "Pins" },
-                  ].map(m => (
+                    ["clusters", "Clusters"],
+                    ["heatmap", "Heatmap"],
+                    ["pins", "Pins"],
+                  ].map(([mode, label]) => (
                     <button
-                      key={m.key}
-                      className={`tv-layer-chip px-2.5 py-1.5 ${mapMode === m.key ? "is-active" : ""}`}
-                      onClick={() => setMapMode(m.key)}
+                      key={mode}
+                      className={`tv-layer-chip px-2.5 py-1.5 ${mapMode === mode ? "is-active" : ""}`}
+                      onClick={() => setMapMode(mode)}
                     >
-                      {m.label}
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -663,40 +1024,40 @@ export default function Home() {
                     </button>
                   }
                 />
-                <div className="grid grid-cols-3 divide-x divide-white/[0.08] px-1 py-4">
-                  <div className="px-3 sm:px-4">
-                    <div className="tv-kicker mb-2">Industrial</div>
-                    <div className="tv-display text-[25px] font-bold text-[#ffd25a]">
-                      09
-                    </div>
-                    <div className="mt-2 tv-severity-bar" />
-                  </div>
-                  <div className="px-3 sm:px-4">
-                    <div className="tv-kicker mb-2">Wildfire</div>
-                    <div className="tv-display text-[25px] font-bold text-[#fffff0]">
-                      06
-                    </div>
+                <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
+                  {liveClassificationCards.map(item => (
                     <div
-                      className="mt-2 tv-severity-bar"
-                      style={{
-                        background:
-                          "linear-gradient(90deg, #ffaa5a 0%, #ffaa5a 46%, rgba(255,255,240,.12) 46%)",
-                      }}
-                    />
-                  </div>
-                  <div className="px-3 sm:px-4">
-                    <div className="tv-kicker mb-2">Other</div>
-                    <div className="tv-display text-[25px] font-bold text-[#fffff0]">
-                      09
+                      key={item.label}
+                      className="border border-white/[0.09] bg-[#291711]/45 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-start gap-2">
+                          <span
+                            className="mt-1 h-2 w-2 shrink-0"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <span className="text-[11px] font-semibold leading-tight text-[#e8dacb]">
+                            {item.label}
+                          </span>
+                        </div>
+                        <span
+                          className="tv-display text-[19px] font-bold"
+                          style={{ color: item.color }}
+                        >
+                          {item.value}
+                        </span>
+                      </div>
+                      <div className="mt-3 h-1 bg-white/[0.09]">
+                        <div
+                          className="h-1"
+                          style={{
+                            width: item.width,
+                            backgroundColor: item.color,
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div
-                      className="mt-2 tv-severity-bar"
-                      style={{
-                        background:
-                          "linear-gradient(90deg, #ffd25a 0%, #ffd25a 73%, rgba(255,255,240,.12) 73%)",
-                      }}
-                    />
-                  </div>
+                  ))}
                 </div>
                 <div className="border-t border-white/[0.08] px-4 py-3 sm:px-5">
                   <div className="flex items-center justify-between text-[11px]">
@@ -731,10 +1092,10 @@ export default function Home() {
                 >
                   <div className="absolute bottom-3 left-4 z-10">
                     <div className="tv-kicker text-[#e8dacb]">
-                      {selectedSite.id}
+                      {selectedDisplay.id}
                     </div>
                     <div className="mt-1 tv-display text-[18px] font-bold tracking-[0.07em] text-[#fffff0]">
-                      {selectedSite.location}
+                      {selectedDisplay.location}
                     </div>
                   </div>
                 </div>
@@ -743,13 +1104,13 @@ export default function Home() {
                     <div>
                       <div className="tv-kicker mb-1.5">Class</div>
                       <div className="text-[12px] font-semibold text-[#fffff0]">
-                        {selectedSite.type} thermal
+                        {selectedDisplay.classification}
                       </div>
                     </div>
                     <div>
                       <div className="tv-kicker mb-1.5">Confidence</div>
                       <div className="text-[12px] font-semibold text-[#ffd25a]">
-                        {selectedConfidence}% / high
+                        {selectedDisplay.confidence}% / high
                       </div>
                     </div>
                   </div>
@@ -757,13 +1118,13 @@ export default function Home() {
                     <div>
                       <div className="tv-kicker mb-1.5">Thermal delta</div>
                       <div className="text-[12px] font-semibold text-[#fffff0]">
-                        {selectedSite.delta}
+                        {selectedDisplay.delta}
                       </div>
                     </div>
                     <div>
                       <div className="tv-kicker mb-1.5">Last observed</div>
                       <div className="text-[12px] font-semibold text-[#fffff0]">
-                        {currentObservation.lastObserved}
+                        {selectedDisplay.lastObserved}
                       </div>
                     </div>
                   </div>
@@ -771,9 +1132,13 @@ export default function Home() {
                     <Button
                       className="h-9 flex-1 rounded-none bg-[#ffd25a] px-3 tv-display text-[11px] font-bold uppercase tracking-[0.12em] text-[#291711]  transition hover:bg-[#ffd25a]"
                       onClick={() =>
-                        toast.success(`Review opened for ${selectedSite.id}`, {
-                          description: "Analyst annotation workspace is ready.",
-                        })
+                        toast.success(
+                          `Review opened for ${selectedDisplay.id}`,
+                          {
+                            description:
+                              "Analyst annotation workspace is ready.",
+                          }
+                        )
                       }
                     >
                       Review signal{" "}
@@ -844,8 +1209,12 @@ export default function Home() {
           <section className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4 sm:gap-4">
             <MetricCard
               label="Active signals"
-              value={String(currentObservation.signals)}
-              note={`Across ${currentObservation.coverage} of monitored regions`}
+              value={String(summary?.total ?? currentObservation.signals)}
+              note={
+                summary
+                  ? "Live records returned by the backend"
+                  : `Across ${currentObservation.coverage} of monitored regions`
+              }
               icon={Flame}
               tone="amber"
               trend="up"
@@ -853,9 +1222,10 @@ export default function Home() {
             <MetricCard
               label="High confidence"
               value={String(
-                Math.max(4, Math.round(currentObservation.signals * 0.29))
+                summary?.high_confidence ??
+                  Math.max(4, Math.round(currentObservation.signals * 0.29))
               ).padStart(2, "0")}
-              note="Model confidence above 90%"
+              note="Backend records with confidence ≥ 90%"
               icon={ShieldCheck}
               tone="normal"
               trend="down"

@@ -1,24 +1,10 @@
 /* TerraVue Command theme: brown canvas #291711, ivory text #fffff0, highlight set #ffd25a / #ffaa5a / #fff05a. Josefin Sans carries headings; Nunito carries descriptions and body copy. */
 @import "tailwindcss";
 @import "tw-animate-css";
+
 @import 'leaflet/dist/leaflet.css';
 @import 'leaflet.markercluster/dist/MarkerCluster.css';
 @import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
-
-.leaflet-container img {
-  max-width: none !important;
-  height: auto !important;
-}
-
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-}
-
-.leaflet-tile {
-  width: 256px !important;
-  height: 256px !important;
-}
 
 @custom-variant dark (&:is(.dark *));
 

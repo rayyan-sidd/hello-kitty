@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
+const API_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
 export function useSitesData(startDate, endDate) {
   const [geojson, setGeojson] = useState(null);
@@ -10,7 +12,7 @@ export function useSitesData(startDate, endDate) {
       start_date: startDate,
       end_date: endDate,
     });
-    fetch(`http://localhost:8000/sites?${params}`)
+    fetch(`${API_BASE}/sites?${params}`)
       .then((res) => res.json())
       .then((data) => {
         setGeojson(data);
