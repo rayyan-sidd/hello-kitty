@@ -29,7 +29,7 @@ const chartColors = [
   "#78716c",
   "#facc15",
   "#3b82f6",
-  "#f5f5f5",
+  "#a855f7",
 ];
 
 const fallbackClassification = [
@@ -184,8 +184,8 @@ export default function Analytics() {
           </div>
           <div className="min-w-0 flex-1 px-2 sm:px-7">
             <div className="tv-kicker">Historical thermal site analysis</div>
-            <h1 className="tv-display truncate text-[20px] font-bold tracking-[0.09em] text-[#fffff0] sm:text-[25px]">
-              ANALYTICS <span className="text-[#ffd25a]">OVERVIEW</span>
+            <h1 className="tv-display text-[20px] font-bold tracking-[0.09em] text-[#fffff0] sm:text-[25px]">
+              <span className="text-[#ffd25a]">FIRESIGHT AI</span> ANALYTICS
             </h1>
           </div>
           <div className="hidden border border-[#ffd25a]/25 bg-[#ffd25a]/[0.07] px-3 py-2 tv-display text-[10px] font-bold uppercase tracking-[0.12em] text-[#ffd25a] sm:block">

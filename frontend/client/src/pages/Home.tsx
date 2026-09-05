@@ -12,8 +12,6 @@ import {
   ChevronDown,
   ChevronRight,
   Clock3,
-  CloudCog,
-  Database,
   Download,
   Eye,
   Flame,
@@ -23,7 +21,6 @@ import {
   MapPin,
   Menu,
   Maximize2,
-  MoreHorizontal,
   Radio,
   RefreshCw,
   Satellite,
@@ -31,7 +28,6 @@ import {
   Settings2,
   ShieldCheck,
   SlidersHorizontal,
-  SquareTerminal,
   TimerReset,
   Waypoints,
   X,
@@ -48,7 +44,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -361,12 +356,6 @@ const navItems = [
   { label: "Settings", icon: Settings2 },
 ];
 
-const systemItems = [
-  { label: "Data sources", icon: Database },
-  { label: "Model health", icon: CloudCog },
-  { label: "Audit trail", icon: SquareTerminal },
-];
-
 const classificationCards = [
   {
     label: "Industrial fire",
@@ -407,7 +396,7 @@ const classificationCards = [
     label: "Persistent Industrial thermal source",
     type: "Persistent Industrial Thermal Source",
     value: "01",
-    color: "#f5f5f5",
+    color: "#a855f7",
     width: "18%",
   },
 ];
@@ -516,9 +505,7 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const [activeNav, setActiveNav] = useState("Dashboard");
   const [selectedSite, setSelectedSite] = useState(sites[0]);
-  const [selectedDateIndex, setSelectedDateIndex] = useState(
-    observationSnapshots.length - 1
-  );
+  const [selectedDateISO, setSelectedDateISO] = useState("2026-08-27");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activeLayer, setActiveLayer] = useState("Thermal delta");
   const [mapMode, setMapMode] = useState("clusters");
@@ -530,7 +517,24 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [refreshCount, setRefreshCount] = useState(0);
 
-  const currentObservation = observationSnapshots[selectedDateIndex];
+  const selectedSnapshot =
+    observationSnapshots.find(
+      observation => observation.dateISO === selectedDateISO
+    ) ?? observationSnapshots[6];
+  const currentObservation =
+    selectedSnapshot.dateISO === selectedDateISO
+      ? selectedSnapshot
+      : {
+          ...selectedSnapshot,
+          dateISO: selectedDateISO,
+          dateLabel: new Date(`${selectedDateISO}T00:00:00`)
+            .toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })
+            .toUpperCase(),
+        };
   const selectedConfidence =
     selectedSite.id === currentObservation.focusSiteId
       ? currentObservation.selectedConfidence
@@ -584,22 +588,27 @@ export default function Home() {
   }, [search]);
 
   const handleDateChange = (index: number) => {
-    setSelectedDateIndex(index);
-    const focusSite = sites.find(
-      site => site.id === observationSnapshots[index].focusSiteId
-    );
+    const snapshot = observationSnapshots[index];
+    setSelectedDateISO(snapshot.dateISO);
+    const focusSite = sites.find(site => site.id === snapshot.focusSiteId);
     if (focusSite) setSelectedSite(focusSite);
   };
 
   const handleCalendarSelect = (date?: Date) => {
     if (!date) return;
+    const dateKey = toDateKey(date);
+    if (dateKey < "2026-05-01" || dateKey > "2026-08-29") return;
     const index = observationSnapshots.findIndex(
-      observation => observation.dateISO === toDateKey(date)
+      observation => observation.dateISO === dateKey
     );
+    setSelectedDateISO(dateKey);
     if (index >= 0) {
-      handleDateChange(index);
-      setCalendarOpen(false);
+      const focusSite = sites.find(
+        site => site.id === observationSnapshots[index].focusSiteId
+      );
+      if (focusSite) setSelectedSite(focusSite);
     }
+    setCalendarOpen(false);
   };
 
   const handleNav = (label: string) => {
@@ -678,47 +687,17 @@ export default function Home() {
                   </DropdownMenuItem>
                 );
               })}
-              <DropdownMenuSeparator className="my-1 bg-[#fffff0]/10" />
-              <DropdownMenuLabel className="tv-kicker px-2 py-2">
-                System
-              </DropdownMenuLabel>
-              {systemItems.map(item => {
-                const Icon = item.icon;
-                return (
-                  <DropdownMenuItem
-                    key={item.label}
-                    onSelect={() =>
-                      toast(`${item.label} is available in the system console.`)
-                    }
-                    className="tv-display flex cursor-pointer items-center gap-2 px-2 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-[#e8dacb] focus:bg-[#4a2417] focus:text-[#fffff0]"
-                  >
-                    <Icon className="h-4 w-4" strokeWidth={1.7} />
-                    <span>{item.label}</span>
-                  </DropdownMenuItem>
-                );
-              })}
-              <DropdownMenuSeparator className="my-1 bg-[#fffff0]/10" />
-              <DropdownMenuItem
-                onSelect={() =>
-                  toast("Operator settings are restricted to authorized users.")
-                }
-                className="tv-display flex cursor-pointer items-center gap-2 px-2 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-[#e8dacb] focus:bg-[#4a2417] focus:text-[#fffff0]"
-              >
-                <Settings2 className="h-4 w-4" strokeWidth={1.7} />
-                <span>Settings</span>
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="mb-2 flex items-center gap-2 tv-kicker">
               <span className="h-1.5 w-1.5 bg-[#ffd25a]" />
               <span>
                 India sector / orbital pass {currentObservation.dateLabel}
               </span>
             </div>
-            <h1 className="tv-display tv-hero-title truncate text-[22px] font-bold uppercase leading-none tracking-[0.08em] text-[#fffff0] sm:text-[25px]">
-              Thermal <span className="tv-heading-gradient">intelligence</span>{" "}
-              overview
+            <h1 className="tv-display tv-hero-title text-[22px] font-bold uppercase leading-none tracking-[0.08em] text-[#fffff0] sm:text-[25px]">
+              <span className="tv-heading-gradient">FireSight</span> AI
             </h1>
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
@@ -728,42 +707,6 @@ export default function Home() {
                 SATELLITE LINK ACTIVE
               </span>
             </div>
-            <button
-              className="tv-control tv-focus-ring"
-              onClick={() => toast("No new operator alerts.")}
-              aria-label="Open alerts"
-            >
-              <Bell className="h-4 w-4" strokeWidth={1.7} />
-            </button>
-            <button
-              className="tv-control tv-focus-ring"
-              onClick={() =>
-                toast(
-                  "Operator menu is restricted to the authenticated command layer."
-                )
-              }
-              aria-label="Open operator menu"
-            >
-              <MoreHorizontal className="h-4 w-4" strokeWidth={1.7} />
-            </button>
-            <div className="hidden h-8 w-px bg-white/10 sm:block" />
-            <div className="hidden text-right sm:block">
-              <div className="tv-display text-[10px] font-bold tracking-[0.1em] text-[#fffff0]">
-                ANALYST / NTRO
-              </div>
-              <div className="mt-0.5 text-[10px] text-[#c6ad9c]">
-                Clearance: mission
-              </div>
-            </div>
-            <button
-              className="tv-focus-ring grid h-8 w-8 place-items-center border border-[#ffd25a]/35 bg-[#ffd25a]/10 tv-display text-xs font-bold text-[#ffd25a]"
-              onClick={() =>
-                toast("Operator profile is read-only in this preview.")
-              }
-              aria-label="Open operator profile"
-            >
-              AM
-            </button>
           </div>
         </header>
 
@@ -842,7 +785,7 @@ export default function Home() {
                             Available observations
                           </div>
                           <div className="mt-1 tv-display text-[13px] font-bold tracking-[0.08em] text-[#ffd25a]">
-                            21–29 AUG 2026
+                            01 MAY–29 AUG 2026
                           </div>
                         </div>
                         <span className="tv-display text-[10px] font-bold tracking-[0.12em] text-[#c6ad9c]">
@@ -854,10 +797,8 @@ export default function Home() {
                         selected={selectedCalendarDate}
                         onSelect={handleCalendarSelect}
                         disabled={date =>
-                          !observationSnapshots.some(
-                            observation =>
-                              observation.dateISO === toDateKey(date)
-                          )
+                          toDateKey(date) < "2026-05-01" ||
+                          toDateKey(date) > "2026-08-29"
                         }
                         initialFocus
                         className="tv-calendar-widget"
@@ -1406,8 +1347,8 @@ export default function Home() {
 
           <footer className="flex flex-col justify-between gap-2 py-6 text-[10px] text-[#9d7765] sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 bg-[#ffd25a]" /> TerraVue Command ·
-              Smart India Hackathon mission console
+              <span className="h-1.5 w-1.5 bg-[#ffd25a]" /> FireSight AI · Smart
+              India Hackathon mission console
             </div>
             <div className="flex items-center gap-4">
               <span>Build 0.9.14-preview</span>
